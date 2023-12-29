@@ -48,6 +48,5 @@ func (store *ElasticsearchStore[E, M]) ExecuteSearch(ctx context.Context, handle
 	if err = json.Unmarshal(responseBody, &searchResult); err != nil {
 		return nil, fmt.Errorf("error unmarshaling response: %w", err)
 	}
-
 	return searchResult, nil
 }
