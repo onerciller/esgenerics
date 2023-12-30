@@ -1,5 +1,8 @@
 package esgenerics
 
+// FieldExtractor is a function type that extracts a field (key) from an entity.
+type FieldExtractor[E Entity[M], M any] func(E) any
+
 // Entity is an interface that must be implemented by all entities.
 // It is used to convert the entity to a model.
 type Entity[M any] interface {
@@ -15,6 +18,15 @@ type Result[E Entity[M], M any] struct {
 type Hits[E Entity[M], M any] struct {
 	Hits  []Hit[E, M] `json:"hits"`
 	Total Total       `json:"total"`
+}
+
+// ToFieldList converts the hits to a list of fields.
+func (h Hits[E, M]) ToFieldList(extractor FieldExtractor[E, M]) []any {
+	var fields []any
+	for _, hit := range h.Hits {
+		fields = append(fields, extractor(hit.Source))
+	}
+	return fields
 }
 
 // ToModelList converts the hits to a list of models.

@@ -16,7 +16,11 @@ type QueryFn func() QueryMap
 //
 //go:generate mockery --name=Store --inpackage --case=snake
 type Store[E Entity[M], M any] interface {
+	// ExecuteSearch performs a search query in Elasticsearch and returns the results.
 	ExecuteSearch(ctx context.Context, handler QueryHandler) (*Result[E, M], error)
+
+	// ExecuteAggregation performs an aggregation query in Elasticsearch and returns the results.
+	ExecuteAggregation(ctx context.Context, handler QueryHandler) (*AggregationResponse, error)
 }
 
 // ElasticsearchStore manages Elasticsearch operations.
@@ -49,4 +53,32 @@ func (store *ElasticsearchStore[E, M]) ExecuteSearch(ctx context.Context, handle
 		return nil, fmt.Errorf("error unmarshaling response: %w", err)
 	}
 	return searchResult, nil
+}
+
+func (store *ElasticsearchStore[E, M]) ExecuteAggregation(ctx context.Context, handler QueryHandler) (*AggregationResponse, error) {
+	query := handler.BuildQuery(ctx)
+
+	jsonQuery, _ := json.Marshal(query)
+
+	fmt.Println("query:", string(jsonQuery))
+
+	resp, err := store.client.Search(ctx, store.indexName, query)
+	if err != nil {
+		return nil, fmt.Errorf("error executing search query: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	fmt.Println("responseBody:", string(responseBody))
+
+	var aggregationResult *AggregationResponse
+	if err = json.Unmarshal(responseBody, &aggregationResult); err != nil {
+		return nil, fmt.Errorf("error unmarshaling response: %w", err)
+	}
+
+	return aggregationResult, nil
 }
